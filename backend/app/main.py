@@ -1,5 +1,6 @@
 ﻿from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,15 +12,9 @@ from app.core.middleware import LoggingAndCorrelationMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     setup_logging()
-    logger.info(
-        "application_startup",
-        app_name=settings.APP_NAME,
-        env=settings.APP_ENV,
-    )
+    logger.info("application_startup", app_name=settings.APP_NAME, env=settings.APP_ENV)
     yield
-    # Shutdown
     logger.info("application_shutdown")
 
 
@@ -31,7 +26,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Register logging & correlation ID middleware
+# Enable CORS for React frontend during development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.add_middleware(LoggingAndCorrelationMiddleware)
 
 
