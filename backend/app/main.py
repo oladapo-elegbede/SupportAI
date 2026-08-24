@@ -1,15 +1,38 @@
-﻿from fastapi import FastAPI, Depends
+﻿from contextlib import asynccontextmanager
+from fastapi import FastAPI, Depends
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.logging import setup_logging, logger
+from app.core.middleware import LoggingAndCorrelationMiddleware
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    setup_logging()
+    logger.info(
+        "application_startup",
+        app_name=settings.APP_NAME,
+        env=settings.APP_ENV,
+    )
+    yield
+    # Shutdown
+    logger.info("application_shutdown")
+
 
 app = FastAPI(
     title=settings.APP_NAME,
     description="AI-Powered Customer Support SaaS API using Retrieval-Augmented Generation (RAG)",
     version="0.1.0",
     debug=settings.DEBUG,
+    lifespan=lifespan,
 )
+
+# Register logging & correlation ID middleware
+app.add_middleware(LoggingAndCorrelationMiddleware)
 
 
 @app.get("/")
