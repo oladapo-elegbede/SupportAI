@@ -1,14 +1,25 @@
 ﻿from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.logging import setup_logging, logger
 from app.core.middleware import LoggingAndCorrelationMiddleware
-from app.api.v1 import auth_router, kb_router, doc_router
+from app.api.v1 import (
+    auth_router,
+    kb_router,
+    doc_router,
+    chat_router,
+    public_chat_router,
+)
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -27,6 +38,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate Limiter setup
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
@@ -42,6 +57,8 @@ app.add_middleware(LoggingAndCorrelationMiddleware)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(kb_router, prefix="/api/v1")
 app.include_router(doc_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
+app.include_router(public_chat_router, prefix="/api/v1")
 
 
 @app.get("/")

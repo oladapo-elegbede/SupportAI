@@ -52,6 +52,22 @@ export const KBManagement: React.FC = () => {
     }
   }, [selectedKb, loadDocuments])
 
+  // Automatic Ingestion Status Polling (Polls every 2 seconds if any document is processing)
+  useEffect(() => {
+    const hasActiveIngestion = documents.some(
+      (d) => d.ingestion_status === 'pending' || d.ingestion_status === 'processing' || d.ingestion_status === 'uploaded'
+    )
+
+    if (!hasActiveIngestion || !selectedKb || !accessToken) return
+
+    const timer = setInterval(() => {
+      loadDocuments()
+      loadKbs()
+    }, 2000)
+
+    return () => clearInterval(timer)
+  }, [documents, selectedKb, accessToken, loadDocuments, loadKbs])
+
   // Handle KB Creation
   const handleCreateKb = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,14 +114,27 @@ export const KBManagement: React.FC = () => {
     setIsUploading(true)
     try {
       await kbApi.uploadDocument(accessToken, selectedKb.id, file)
-      setSuccess(`Document "${file.name}" uploaded successfully!`)
+      setSuccess(`Document "${file.name}" uploaded! Background ingestion started.`)
       await loadDocuments()
       await loadKbs()
     } catch (err: any) {
       setError(err.message || 'Failed to upload document')
     } finally {
       setIsUploading(false)
-      e.target.value = '' // Reset input
+      e.target.value = ''
+    }
+  }
+
+  // Handle Re-ingestion
+  const handleReingest = async (docId: string) => {
+    if (!accessToken) return
+    setError(null)
+    try {
+      await kbApi.reingestDocument(accessToken, docId)
+      setSuccess('Re-ingestion job enqueued!')
+      await loadDocuments()
+    } catch (err: any) {
+      setError(err.message || 'Failed to re-ingest document')
     }
   }
 
@@ -231,7 +260,7 @@ export const KBManagement: React.FC = () => {
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 Documents in <span className="text-indigo-400">{selectedKb.name}</span>
               </h3>
-              <p className="text-slate-400 text-xs mt-0.5">Upload PDF or TXT files ($\le$ 20MB) for RAG ingestion</p>
+              <p className="text-slate-400 text-xs mt-0.5">Upload PDF or TXT files ($\le$ 20MB) for RAG vector ingestion</p>
             </div>
 
             {/* File Upload Button */}
@@ -261,8 +290,8 @@ export const KBManagement: React.FC = () => {
                     <th className="py-3 px-4">Filename</th>
                     <th className="py-3 px-4">Type</th>
                     <th className="py-3 px-4">Size</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+                    <th className="py-3 px-4">Ingestion Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
@@ -272,17 +301,31 @@ export const KBManagement: React.FC = () => {
                       <td className="py-3 px-4 font-mono uppercase text-indigo-300">{doc.file_type}</td>
                       <td className="py-3 px-4 font-mono text-slate-400">{(doc.file_size_bytes / 1024).toFixed(1)} KB</td>
                       <td className="py-3 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase ${
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase inline-flex items-center gap-1.5 ${
                           doc.ingestion_status === 'completed'
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                             : doc.ingestion_status === 'failed'
                             ? 'bg-red-500/10 text-red-400 border border-red-500/20'
                             : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 animate-pulse'
                         }`}>
-                          {doc.ingestion_status}
+                          {(doc.ingestion_status === 'pending' || doc.ingestion_status === 'processing') && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
+                          )}
+                          {doc.ingestion_status === 'completed' && '✓ Searchable'}
+                          {doc.ingestion_status === 'pending' && 'Queued in Redis'}
+                          {doc.ingestion_status === 'processing' && 'Embedding Vectors...'}
+                          {doc.ingestion_status === 'failed' && 'Failed'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right space-x-3">
+                        {doc.ingestion_status === 'failed' && (
+                          <button
+                            onClick={() => handleReingest(doc.id)}
+                            className="text-indigo-400 hover:text-indigo-300 font-semibold"
+                          >
+                            Re-try
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDeleteDocument(doc.id)}
                           className="text-red-400 hover:text-red-300 font-semibold"

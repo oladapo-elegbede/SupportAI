@@ -21,7 +21,7 @@ router = APIRouter(tags=["Documents"])
     "/knowledge-bases/{kb_id}/documents",
     response_model=DocumentResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Upload a PDF or TXT document to a Knowledge Base",
+    summary="Upload a PDF or TXT document and enqueue ingestion job",
 )
 async def upload_document(
     kb_id: uuid.UUID,
@@ -45,6 +45,31 @@ async def upload_document(
             detail=str(e),
         )
     except DocumentError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@router.post(
+    "/documents/{doc_id}/reingest",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Re-trigger ingestion pipeline for a document",
+)
+async def reingest_document(
+    doc_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DocumentResponse:
+    doc_service = DocumentService(db)
+    try:
+        doc = await doc_service.reingest_document(
+            organization_id=current_user.organization_id,
+            document_id=doc_id,
+        )
+        return DocumentResponse.model_validate(doc)
+    except DocumentNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),

@@ -1,0 +1,3 @@
+SupportAI background worker ingests files asynchronously using ARQ and Redis.
+
+Vectors are embedded via local Ollama nomic-embed-text.

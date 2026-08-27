@@ -23,6 +23,39 @@ from app.services.document import (
     DocumentNotFoundError,
     FileValidationError,
 )
+from app.services.extractor import (
+    TextExtractorService,
+    ExtractionError,
+)
+from app.services.chunker import (
+    TextChunkerService,
+    DocumentChunkData,
+)
+from app.services.embedding import (
+    EmbeddingService,
+    OllamaEmbeddingProvider,
+    EmbeddingError,
+    get_embedding_service,
+)
+from app.services.ingestion import (
+    IngestionService,
+    IngestionError,
+)
+from app.services.retrieval import (
+    RetrievalService,
+    RetrievedChunk,
+)
+from app.services.llm import (
+    LLMService,
+    OllamaLLMProvider,
+    PromptBuilder,
+    LLMError,
+    get_llm_service,
+)
+from app.services.chat import (
+    ChatService,
+    ChatError,
+)
 
 __all__ = [
     "AuthService",
@@ -42,4 +75,23 @@ __all__ = [
     "DocumentError",
     "DocumentNotFoundError",
     "FileValidationError",
+    "TextExtractorService",
+    "ExtractionError",
+    "TextChunkerService",
+    "DocumentChunkData",
+    "EmbeddingService",
+    "OllamaEmbeddingProvider",
+    "EmbeddingError",
+    "get_embedding_service",
+    "IngestionService",
+    "IngestionError",
+    "RetrievalService",
+    "RetrievedChunk",
+    "LLMService",
+    "OllamaLLMProvider",
+    "PromptBuilder",
+    "LLMError",
+    "get_llm_service",
+    "ChatService",
+    "ChatError",
 ]

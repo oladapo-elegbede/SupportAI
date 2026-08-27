@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.knowledge_base import KnowledgeBase
     from app.models.document import Document
+    from app.models.conversation import Conversation
 
 
 class Organization(Base):
@@ -51,6 +52,11 @@ class Organization(Base):
     )
     documents: Mapped[List["Document"]] = relationship(
         "Document",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation",
         back_populates="organization",
         cascade="all, delete-orphan",
     )

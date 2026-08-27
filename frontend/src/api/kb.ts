@@ -89,6 +89,18 @@ export const kbApi = {
     return handleResponse<Document>(res)
   },
 
+  async reingestDocument(accessToken: string, docId: string): Promise<Document> {
+    const res = await fetch(`${API_BASE_URL}/documents/${docId}/reingest`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      credentials: 'include',
+    })
+    return handleResponse<Document>(res)
+  },
+
   async deleteDocument(accessToken: string, docId: string): Promise<{ message: string }> {
     const res = await fetch(`${API_BASE_URL}/documents/${docId}`, {
       method: 'DELETE',

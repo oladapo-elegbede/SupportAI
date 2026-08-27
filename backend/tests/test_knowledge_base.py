@@ -4,7 +4,7 @@ import pytest
 import httpx
 from sqlalchemy import select, delete
 
-from app.core.database import AsyncSessionLocal
+from tests.conftest import TestAsyncSessionLocal
 from app.models.organization import Organization
 from app.models.user import User
 from app.models.knowledge_base import KnowledgeBase
@@ -14,13 +14,11 @@ from app.services.storage import LocalFileStorage
 
 async def clean_tenant_data(email: str, slug: str):
     """Helper to clean up test orgs, users, KBs, and disk files."""
-    async with AsyncSessionLocal() as session:
+    async with TestAsyncSessionLocal() as session:
         org = await session.scalar(select(Organization).where(Organization.slug == slug))
         if org:
-            # Purge tenant disk files
             storage = LocalFileStorage("./uploads")
             await storage.delete_directory(str(org.id))
-            
             await session.execute(delete(Organization).where(Organization.id == org.id))
             await session.commit()
         await session.close()

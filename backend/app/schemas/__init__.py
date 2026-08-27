@@ -12,6 +12,13 @@ from app.schemas.knowledge_base import (
     KnowledgeBaseResponse,
 )
 from app.schemas.document import DocumentResponse
+from app.schemas.chat import (
+    ChatMessageRequest,
+    ChatMessageResponse,
+    MessageResponse,
+    ConversationResponse,
+    SourceCitation,
+)
 
 __all__ = [
     "RegisterRequest",
@@ -24,4 +31,9 @@ __all__ = [
     "KnowledgeBaseUpdate",
     "KnowledgeBaseResponse",
     "DocumentResponse",
+    "ChatMessageRequest",
+    "ChatMessageResponse",
+    "MessageResponse",
+    "ConversationResponse",
+    "SourceCitation",
 ]

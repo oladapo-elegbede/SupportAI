@@ -2,9 +2,9 @@
 import pytest
 import httpx
 from datetime import timedelta
-from sqlalchemy import delete
+from sqlalchemy import select, delete
 
-from app.core.database import AsyncSessionLocal
+from tests.conftest import TestAsyncSessionLocal
 from app.core.security import (
     hash_password,
     verify_password,
@@ -18,11 +18,12 @@ from app.models.user import User
 
 
 async def clean_test_user(email: str, slug: str):
-    """Helper to clean up test records before/after integration tests."""
-    async with AsyncSessionLocal() as session:
+    """Helper to clean up test records using isolated test session."""
+    async with TestAsyncSessionLocal() as session:
         await session.execute(delete(User).where(User.email == email))
         await session.execute(delete(Organization).where(Organization.slug == slug))
         await session.commit()
+        await session.close()
 
 
 # ============================================================================
@@ -212,7 +213,7 @@ async def test_login_invalid_password(client: httpx.AsyncClient):
 
 
 # ============================================================================
-# 5. SESSION REFRESH & ROTATION TESTS
+# 5. SESSION REFRESH, ROTATION & THEFT REUSE TESTS
 # ============================================================================
 
 @pytest.mark.asyncio

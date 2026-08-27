@@ -4,21 +4,40 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { KBManagement } from './components/KBManagement'
+import { ChatInterface } from './components/ChatInterface'
 
 const DashboardContent: React.FC = () => {
   const { user, logout } = useAuth()
+  const [activeTab, setActiveTab] = useState<'kb' | 'chat'>('kb')
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
       {/* Navbar */}
       <header className="bg-slate-800 border-b border-slate-700/80 px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <span className="text-indigo-400">SupportAI</span> SaaS
           </h1>
-          <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            Phase 3 Active
-          </span>
+
+          {/* Navigation Tabs */}
+          <nav className="flex bg-slate-900 p-1 rounded-lg border border-slate-700/60">
+            <button
+              onClick={() => setActiveTab('kb')}
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition ${
+                activeTab === 'kb' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Knowledge Bases & Documents
+            </button>
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`px-4 py-1.5 rounded-md text-xs font-semibold transition ${
+                activeTab === 'chat' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              RAG Chat Tester
+            </button>
+          </nav>
         </div>
 
         <div className="flex items-center gap-4">
@@ -39,7 +58,7 @@ const DashboardContent: React.FC = () => {
 
       {/* Main Body */}
       <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
-        <KBManagement />
+        {activeTab === 'kb' ? <KBManagement /> : <ChatInterface />}
       </main>
     </div>
   )

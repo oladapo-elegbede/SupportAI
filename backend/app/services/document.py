@@ -1,5 +1,4 @@
 ﻿import uuid
-
 from typing import List, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.document import Document
 from app.models.knowledge_base import KnowledgeBase
 from app.services.storage import FileStorageService, get_storage_service
+from app.core.queue import enqueue_ingestion_job
 
 
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB Limit
@@ -36,14 +36,12 @@ class DocumentService:
             raise FileValidationError("Uploaded file is empty.")
 
         if len(file_bytes) > MAX_FILE_SIZE_BYTES:
-            raise FileValidationError(f"File size exceeds limit of 20MB.")
+            raise FileValidationError("File size exceeds limit of 20MB.")
 
-        # Extract extension
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext not in ["pdf", "txt"]:
             raise FileValidationError("Only PDF (.pdf) and Plain Text (.txt) files are allowed.")
 
-        # Magic byte checks
         if ext == "pdf":
             if not file_bytes.startswith(b"%PDF-"):
                 raise FileValidationError("Invalid PDF file format (failed magic byte check).")
@@ -53,7 +51,6 @@ class DocumentService:
             except UnicodeDecodeError:
                 raise FileValidationError("TXT file must be valid UTF-8 encoded text.")
 
-        # Sanitize filename (strip directory components)
         clean_name = filename.replace("\\", "/").split("/")[-1]
         return clean_name, ext
 
@@ -77,7 +74,7 @@ class DocumentService:
         # 2. Validate File
         clean_filename, file_type = self.validate_file(filename, file_bytes)
 
-        # 3. Create Document DB record
+        # 3. Create Document DB record with status = 'pending'
         doc_id = uuid.uuid4()
         rel_file_path = f"{organization_id}/{knowledge_base_id}/{doc_id}.{file_type}"
 
@@ -89,17 +86,37 @@ class DocumentService:
             file_path=rel_file_path,
             file_type=file_type,
             file_size_bytes=len(file_bytes),
-            ingestion_status="uploaded",
+            ingestion_status="pending",
             ingestion_version=1,
         )
 
         # 4. Save file to disk
         await self.storage.save_file(file_bytes, rel_file_path)
 
-        # 5. Commit to DB
+        # 5. Commit DB record
         self.db.add(doc)
         await self.db.commit()
         await self.db.refresh(doc)
+
+        # 6. Enqueue background ingestion job in Redis
+        await enqueue_ingestion_job(doc.id, organization_id)
+
+        return doc
+
+    async def reingest_document(
+        self, organization_id: uuid.UUID, document_id: uuid.UUID
+    ) -> Document:
+        """Re-triggers document ingestion pipeline (e.g. after failure or tuning)."""
+        doc = await self.get_document_by_id(organization_id, document_id)
+
+        doc.ingestion_status = "pending"
+        doc.ingestion_version += 1
+        doc.error_message = None
+        await self.db.commit()
+        await self.db.refresh(doc)
+
+        # Enqueue job in Redis
+        await enqueue_ingestion_job(doc.id, organization_id)
 
         return doc
 
@@ -140,10 +157,7 @@ class DocumentService:
     ) -> bool:
         doc = await self.get_document_by_id(organization_id, document_id)
 
-        # Remove file from disk
         await self.storage.delete_file(doc.file_path)
-
-        # Remove record from DB
         await self.db.delete(doc)
         await self.db.commit()
         return True
