@@ -1,18 +1,19 @@
 ﻿import uuid
 import time
-from fastapi import Request
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 import structlog
+
+from app.core.config import settings
 
 logger = structlog.get_logger("supportai.http")
 
 
 class LoggingAndCorrelationMiddleware(BaseHTTPMiddleware):
+    """Middleware that injects X-Request-ID and logs request start/finish timing."""
     async def dispatch(self, request: Request, call_next):
-        # Extract existing X-Request-ID header or generate a new UUID
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         
-        # Bind correlation ID to structlog contextvars for this request thread
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
 
@@ -37,7 +38,6 @@ class LoggingAndCorrelationMiddleware(BaseHTTPMiddleware):
                 duration_ms=round(process_time, 2),
             )
 
-            # Return X-Request-ID back in response headers
             response.headers["X-Request-ID"] = request_id
             return response
 
@@ -52,3 +52,20 @@ class LoggingAndCorrelationMiddleware(BaseHTTPMiddleware):
                 exc_info=True,
             )
             raise exc
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware that attaches security hardening headers to all HTTP responses."""
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        
+        # Hardening Security Headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        
+        if settings.APP_ENV != "development":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        return response

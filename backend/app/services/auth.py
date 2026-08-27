@@ -114,7 +114,7 @@ class AuthService:
         return access_token, raw_refresh_token
 
     async def refresh_session(self, raw_refresh_token: str) -> Tuple[str, str]:
-        """Validates refresh token, rotates session tokens, with 5-sec grace period for race conditions."""
+        """Validates refresh token, rotates session tokens, with 5-sec grace period for rotation race conditions."""
         token_hash = hash_refresh_token(raw_refresh_token)
 
         rt_record = await self.db.scalar(
@@ -126,13 +126,11 @@ class AuthService:
 
         now = datetime.now(timezone.utc)
 
-        # REUSE / THEFT DETECTION WITH 5-SECOND CONCURRENCY GRACE PERIOD
+        # REUSE / THEFT DETECTION WITH 5-SECOND CONCURRENCY GRACE PERIOD FOR ROTATION
         if rt_record.is_revoked:
-            # If revoked within last 5 seconds (React StrictMode double-mount or network retry), allow grace period
             if rt_record.revoked_at and (now - rt_record.revoked_at).total_seconds() < 5.0:
                 user = await self.db.scalar(select(User).where(User.id == rt_record.user_id))
                 if user and user.is_active:
-                    # Issue replacement access token without terminating family
                     access_token = create_access_token(user_id=user.id, organization_id=user.organization_id)
                     new_raw_refresh = generate_opaque_refresh_token()
                     new_token_hash = hash_refresh_token(new_raw_refresh)
@@ -148,7 +146,7 @@ class AuthService:
                     await self.db.commit()
                     return access_token, new_raw_refresh
 
-            # If revoked > 5 seconds ago -> Genuine Theft Detected! Revoke entire family.
+            # Genuine Theft Detected! Revoke entire family.
             await self.db.execute(
                 update(RefreshToken)
                 .where(RefreshToken.family_id == rt_record.family_id)
@@ -192,12 +190,13 @@ class AuthService:
         return access_token, new_raw_refresh
 
     async def logout(self, raw_refresh_token: str) -> None:
-        """Revokes session refresh token upon logout."""
+        """Revokes session refresh token upon logout (bypasses grace period)."""
         token_hash = hash_refresh_token(raw_refresh_token)
         rt_record = await self.db.scalar(
             select(RefreshToken).where(RefreshToken.token_hash == token_hash)
         )
         if rt_record and not rt_record.is_revoked:
             rt_record.is_revoked = True
-            rt_record.revoked_at = datetime.now(timezone.utc)
+            # Set revoked_at to 10s in the past so explicit logout skips rotation grace period
+            rt_record.revoked_at = datetime.now(timezone.utc) - timedelta(seconds=10)
             await self.db.commit()

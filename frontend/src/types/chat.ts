@@ -5,7 +5,7 @@
 
 export interface SourceCitation {
   document_name: string
-  page_number: int
+  page_number: number
   similarity_score: number
 }
 

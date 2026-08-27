@@ -10,7 +10,8 @@ from slowapi.util import get_remote_address
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.logging import setup_logging, logger
-from app.core.middleware import LoggingAndCorrelationMiddleware
+from app.core.middleware import LoggingAndCorrelationMiddleware, SecurityHeadersMiddleware
+from app.core.exceptions import register_exception_handlers
 from app.api.v1 import (
     auth_router,
     kb_router,
@@ -42,6 +43,9 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Register Global Exception Handlers
+register_exception_handlers(app)
+
 # Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
@@ -51,6 +55,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(LoggingAndCorrelationMiddleware)
 
 # Mount API v1 routers
