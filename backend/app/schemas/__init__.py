@@ -6,6 +6,12 @@
     AuthUserResponse,
     TokenResponse,
 )
+from app.schemas.knowledge_base import (
+    KnowledgeBaseCreate,
+    KnowledgeBaseUpdate,
+    KnowledgeBaseResponse,
+)
+from app.schemas.document import DocumentResponse
 
 __all__ = [
     "RegisterRequest",
@@ -14,4 +20,8 @@ __all__ = [
     "UserResponse",
     "AuthUserResponse",
     "TokenResponse",
+    "KnowledgeBaseCreate",
+    "KnowledgeBaseUpdate",
+    "KnowledgeBaseResponse",
+    "DocumentResponse",
 ]
