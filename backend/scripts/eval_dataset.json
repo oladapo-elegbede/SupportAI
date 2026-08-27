@@ -1,0 +1,61 @@
+[
+  {
+    "id": "tc_001",
+    "category": "policy",
+    "query": "What is the deadline for requesting a refund?",
+    "document_filename": "refund_policy.txt",
+    "document_content": "SupportAI Refund Policy:\n1. Customers may request a full refund within 30 days of initial purchase.\n2. Refunds are processed to the original payment method within 5 business days.",
+    "expected_source_document": "refund_policy.txt",
+    "expected_keywords": [
+      "30 days",
+      "refund"
+    ],
+    "is_out_of_context": false
+  },
+  {
+    "id": "tc_002",
+    "category": "support_hours",
+    "query": "When is technical support available for organization members?",
+    "document_filename": "support_guide.txt",
+    "document_content": "Technical Support Hours:\nOur technical support team is available 24/7 for organization members via live chat and email.",
+    "expected_source_document": "support_guide.txt",
+    "expected_keywords": [
+      "24/7",
+      "live chat"
+    ],
+    "is_out_of_context": false
+  },
+  {
+    "id": "tc_003",
+    "category": "technical",
+    "query": "What database and extension does SupportAI use for vector storage?",
+    "document_filename": "tech_stack.txt",
+    "document_content": "SupportAI Architecture:\nThe backend stores relational data and vector embeddings in PostgreSQL using the pgvector extension with HNSW indexes.",
+    "expected_source_document": "tech_stack.txt",
+    "expected_keywords": [
+      "postgresql",
+      "pgvector"
+    ],
+    "is_out_of_context": false
+  },
+  {
+    "id": "tc_004",
+    "category": "out_of_bounds",
+    "query": "What is the secret recipe for baking chocolate brownies?",
+    "document_filename": "refund_policy.txt",
+    "document_content": "SupportAI Refund Policy:\n1. Customers may request a full refund within 30 days of initial purchase.",
+    "expected_source_document": null,
+    "expected_keywords": [],
+    "is_out_of_context": true
+  },
+  {
+    "id": "tc_005",
+    "category": "out_of_bounds",
+    "query": "Who won the FIFA World Cup in 2022?",
+    "document_filename": "tech_stack.txt",
+    "document_content": "SupportAI Architecture:\nThe backend stores relational data and vector embeddings in PostgreSQL using the pgvector extension.",
+    "expected_source_document": null,
+    "expected_keywords": [],
+    "is_out_of_context": true
+  }
+]
