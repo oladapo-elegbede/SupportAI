@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.logging import setup_logging, logger
 from app.core.middleware import LoggingAndCorrelationMiddleware
+from app.api.v1.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -26,7 +27,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for React frontend during development
+# Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -36,6 +37,9 @@ app.add_middleware(
 )
 
 app.add_middleware(LoggingAndCorrelationMiddleware)
+
+# Mount API v1 router
+app.include_router(auth_router, prefix="/api/v1")
 
 
 @app.get("/")
